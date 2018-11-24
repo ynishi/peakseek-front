@@ -1,0 +1,7 @@
+.env
+elm-stuff
+node_modules
+dist
+yarn-error.log
+.yo-rc.json
+.idea

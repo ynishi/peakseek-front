@@ -1,0 +1,27 @@
+{
+  "name": "peakseek-front",
+  "version": "0.0.1",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "webpack": "webpack",
+    "make": "elm make src/Main.elm --output=dist/main.js",
+    "clean": "rm -r dist/*",
+    "build": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
+    "dev": "webpack-dev-server --mode development --port 3000",
+    "errors": "webpack --mode development --display-error-details"
+  },
+  "dependencies": {
+    "dotenv-webpack": "^1.5.7",
+    "elm-webpack-loader": "^5.0.0",
+    "file-loader": "^2.0.0",
+    "loader-utils": "^1.1.0",
+    "webpack": "^4.26.0",
+    "webpack-cli": "^3.1.2",
+    "webpack-dev-server": "^3.1.10"
+  },
+  "devDependencies": {
+    "@webpack-cli/init": "^0.1.2"
+  }
+}
