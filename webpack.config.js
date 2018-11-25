@@ -4,7 +4,9 @@ const webpack = require('webpack');
 
 module.exports = {
   plugins: [
-    new Dotenv()
+    new Dotenv({
+      systemvars: true
+    })
   ],
   module: {
     rules: [{
