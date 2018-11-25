@@ -347,7 +347,7 @@ view model =
         [ div [ class "section" ]
             [ div [ class "container" ]
                 [ h1 [ class "title" ] [ text "Simple Data Polynomial Regression" ]
-                , p [ bulmac Content ] [ text "This is a simple tool to calculate polynomial regression. Just input list of x, and list of y, send data and expression will show. A API is provided too." ]
+                , p [ bulmac Content ] [ text "This is a simple tool to calculate polynomial regression. Just input list of x, and list of y, send data and expression will show. The API is provided too." ]
                 , xsInput xsInputStr xs xsErrStr
                 , ysInput ysInputStr ys ysErrStr
                 , constNInput constN
