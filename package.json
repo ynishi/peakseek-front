@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "webpack": "webpack",
+    "test": "yarn build",
     "make": "elm make src/Main.elm --output=dist/main.js",
     "clean": "rm -r dist/*",
     "build": "webpack --mode production",
