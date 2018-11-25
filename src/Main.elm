@@ -1,4 +1,4 @@
-module Main exposing (..)
+module Main exposing (Bulma(..), Classes, Const, DataXY, DataXYId, HTTPDataXY(..), Handler, IDs(..), Model, Msg(..), apiView, bulma, bulmac, constAPI, constDecoder, constEncoder, constNInput, conv, dataXYAPI, dataXYDecoder, dataXYEncoder, decodeNs, defaultConstN, expView, formatFloat, init, initialModel, lenStr, main, makeListStr, newClasses, sampleInputInternal, stopBoth, update, view, xsInput, xysTable, ysInput, zipWithNumber)
 
 import Array as A
 import Browser exposing (Document)
@@ -12,6 +12,7 @@ import Json.Decode exposing (Decoder, decodeString, errorToString, field, float,
 import Json.Decode.Pipeline exposing (hardcoded, optional, required)
 import Json.Encode as Encode
 import List as L
+import List.Extra as LE
 import String exposing (..)
 import String.Extra exposing (..)
 
@@ -346,19 +347,26 @@ view model =
         [ div [ class "section" ]
             [ div [ class "container" ]
                 [ h1 [ class "title" ] [ text "Simple Data Polynomial Regression" ]
-                , p [ class "content" ] [ text "This is a simple tool to calculate polynomial regression. Just input list of x, and list of y, send data and expression will show. A API is provided too." ]
+                , p [ bulmac Content ] [ text "This is a simple tool to calculate polynomial regression. Just input list of x, and list of y, send data and expression will show. A API is provided too." ]
                 , xsInput xsInputStr xs xsErrStr
                 , ysInput ysInputStr ys ysErrStr
                 , constNInput constN
                 , xysTable xs ys
-                , div [ class "field" ] [ div [ class "control" ] [ button [ class "button is-link", disabled <| not isValid, onClick postOrPut ] [ text <| postOrPutButtonTitle ] ] ]
+                , div [ class "field" ] [ div [ class "control" ] [ button [ bulmac <| AddB Button IsLink, disabled <| not isValid, onClick postOrPut ] [ text <| postOrPutButtonTitle ] ] ]
                 , dataXYMsg
                 , expView consts isExp
                 , apiView apiUrl isExp
                 ]
             ]
+        , footer [ bulmac Footer ]
+            [ div [ bulmac <| AddB Content HasTextCentered ] [ copyView ]
+            ]
         ]
     }
+
+
+copyView =
+    p [] [ strong [] [ text "Peakseek" ], text " by (c) 2018 ", a [ href "https://github.com/ynishi" ] [ text "Yutaka Nishimura" ], text ". The source code is licensed ", a [ href "http://opensource.org/licenses/mit-license.php" ] [ text "MIT" ], text ", published in ", a [ href "https://github.com/ynishi/peakseek" ] [ text "ynishi/peakseek" ] ]
 
 
 apiView apiUrl isExp =
@@ -397,7 +405,7 @@ constNInput constN =
     div [ class "field" ]
         [ label [ class "label", for cid ] [ text "Number of Consts" ]
         , div [ class "control" ]
-            [ input [ id cid, class "input", type_ "number", Html.Attributes.min "1", placeholder "3", value (fromInt constN), onInput ConstN ] []
+            [ input [ id cid, bulmac Input, type_ "number", Html.Attributes.min "1", placeholder "3", value (fromInt constN), onInput ConstN ] []
             ]
         ]
 
@@ -484,9 +492,9 @@ sampleInputInternal i l handler v fl err =
     div [ class "field" ]
         [ label [ class "label", for istr ] [ text l ]
         , div [ class "control" ]
-            [ input [ id istr, class "input", type_ "text", placeholder "1.0, 2.0 ...", value v, onInput handler ] []
+            [ input [ id istr, bulmac Input, type_ "text", placeholder "1.0, 2.0 ...", value v, onInput handler ] []
             ]
-        , p [ classList [ ( "help", True ), ( "is-success", isOk && not isInit ), ( "is-danger", not isOk && not isInit ) ] ] [ "Result: " ++ msg |> text ]
+        , p [ bulmac <| AddB Help <| SwitchB (WhitchB IsSuccess IsDanger isOk) (not isInit) ] [ "Result: " ++ msg |> text ]
         ]
 
 
@@ -517,6 +525,107 @@ zipWithNumber l =
 
 formatFloat =
     F.format usLocale
+
+
+
+-- Bulma helper
+
+
+type Bulma
+    = AddB Bulma Bulma
+    | CompB Bulma
+    | EmptyB
+    | ListB (List Bulma)
+    | SubB Bulma Bulma
+    | SwitchB Bulma Bool
+    | WhitchB Bulma Bulma Bool
+    | Button
+    | Content
+    | Footer
+    | HasTextCentered
+    | Help
+    | Input
+    | IsDanger
+    | IsLink
+    | IsSuccess
+
+
+type alias Classes =
+    List ( String, Bool )
+
+
+newClasses : String -> Classes
+newClasses str =
+    [ ( str, True ) ]
+
+
+bulmac b =
+    b |> bulma |> classList
+
+
+bulma : Bulma -> Classes
+bulma b =
+    case b of
+        AddB x y ->
+            bulma x ++ bulma y
+
+        SubB x y ->
+            L.map
+                (\( name, bool ) ->
+                    if L.member name (L.map Tuple.first (bulma y)) then
+                        ( name, False )
+
+                    else
+                        ( name, bool )
+                )
+            <|
+                bulma x
+
+        CompB x ->
+            LE.uniqueBy Tuple.first <| L.filter Tuple.second <| bulma x
+
+        EmptyB ->
+            []
+
+        ListB xs ->
+            bulma <| L.foldr AddB EmptyB xs
+
+        SwitchB x bool ->
+            L.map (\( a, _ ) -> ( a, bool )) <| bulma x
+
+        WhitchB ok ng bool ->
+            if bool then
+                bulma ok
+
+            else
+                bulma ng
+
+        Button ->
+            newClasses "button"
+
+        Content ->
+            newClasses "content"
+
+        Footer ->
+            newClasses "footer"
+
+        HasTextCentered ->
+            newClasses "has-text-centered"
+
+        Help ->
+            newClasses "help"
+
+        IsDanger ->
+            newClasses "is-danger"
+
+        IsLink ->
+            newClasses "is-link"
+
+        IsSuccess ->
+            newClasses "is-success"
+
+        Input ->
+            newClasses "input"
 
 
 
