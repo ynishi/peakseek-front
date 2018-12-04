@@ -6,16 +6,21 @@ const TerserPlugin = require('terser-webpack-plugin');
 module.exports = (env, argv) => {
     var optimization = {};
     var devServer = {};
-    var optimization = {};
     if (argv.mode === 'development') {
-        optionsDebug = true;
+        options = {
+          debug: true,
+          optimize: false
+        };
         devServer = {
             inline: true,
             stats: 'errors-only'
         };
     }
     if (argv.mode === 'production') {
-        optionsDebug = false;
+        options = {
+          debug: false,
+          optimize: true
+        };
         optimization = {
             minimizer: [
                 new TerserPlugin({
@@ -82,10 +87,7 @@ module.exports = (env, argv) => {
                     test: /\.elm$/,
                     exclude: [/elm-stuff/, /node_modules/],
                     loader: "elm-webpack-loader",
-                    options: {
-                        debug: optionsDebug,
-                        optimize: true,
-                    }
+                    options: options
                 }
             ],
         },

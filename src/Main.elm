@@ -1,7 +1,8 @@
 module Main exposing (Bulma(..), Classes, Const, DataXY, DataXYId, HTTPDataXY(..), Handler, IDs(..), Model, Msg(..), apiView, bulma, bulmac, constAPI, constDecoder, constEncoder, constNInput, conv, dataXYAPI, dataXYDecoder, dataXYEncoder, decodeNs, defaultConstN, expView, formatFloat, init, initialModel, lenStr, main, makeListStr, newClasses, sampleInputInternal, stopBoth, update, view, xsInput, xysTable, ysInput, zipWithNumber)
 
 import Array as A
-import Browser exposing (Document)
+import Browser
+import Browser.Navigation as Nav
 import FormatNumber as F
 import FormatNumber.Locales exposing (Locale, usLocale)
 import Html exposing (..)
@@ -15,6 +16,46 @@ import List as L
 import List.Extra as LE
 import String exposing (..)
 import String.Extra exposing (..)
+import Url
+import Url.Parser exposing ((</>), Parser, map, oneOf, parse, s, string, top)
+
+
+
+-- Route
+
+
+type Route
+    = Home
+    | NotFound
+    | Xys DataXYId
+
+
+routeParser : Parser (Route -> a) a
+routeParser =
+    oneOf
+        [ map Home top
+        , map Xys (s "xys" </> Url.Parser.int)
+        ]
+
+
+toRoute : Url.Url -> Route
+toRoute url =
+    { url | path = Maybe.withDefault "" url.fragment, fragment = Nothing }
+        |> parse routeParser
+        |> Maybe.withDefault NotFound
+
+
+fromRoute : Route -> String
+fromRoute r =
+    case r of
+        Home ->
+            "home"
+
+        NotFound ->
+            "not found"
+
+        Xys i ->
+            "xys: " ++ fromInt i
 
 
 
@@ -22,16 +63,16 @@ import String.Extra exposing (..)
 
 
 type alias Model =
-    { endpoint : String, consts : List Float, constErrStr : String, dataXYId : DataXYId, dataXY : HTTPDataXY, xsInputStr : String, xs : List Float, xsErrStr : String, ysInputStr : String, ys : List Float, ysErrStr : String, constN : Int }
+    { endpoint : String, consts : List Float, constErrStr : String, dataXYId : DataXYId, dataXY : HTTPDataXY, xsInputStr : String, xs : List Float, xsErrStr : String, ysInputStr : String, ys : List Float, ysErrStr : String, constN : Int, key : Nav.Key, url : Url.Url }
 
 
-initialModel endpoint =
-    { endpoint = endpoint, consts = [], constErrStr = "", dataXYId = 0, dataXY = Yet, xs = [], ys = [], xsInputStr = "", xsErrStr = "", ysInputStr = "", ysErrStr = "", constN = defaultConstN }
+initialModel endpoint url key =
+    { endpoint = endpoint, consts = [], constErrStr = "", dataXYId = 0, dataXY = Yet, xs = [], ys = [], xsInputStr = "", xsErrStr = "", ysInputStr = "", ysErrStr = "", constN = defaultConstN, key = key, url = url }
 
 
-init : String -> ( Model, Cmd Msg )
-init flag =
-    ( initialModel flag, Cmd.none )
+init : String -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flag url key =
+    ( initialModel flag url key, Cmd.none )
 
 
 defaultConstN =
@@ -117,6 +158,7 @@ type Msg
     = GotDataXY (Result Http.Error DataXY)
     | Xs String
     | Ys String
+    | GetDataXY
     | PostDataXY
     | PutDataXY
     | PutMsg
@@ -124,6 +166,8 @@ type Msg
     | GotConst (Result Http.Error Const)
     | NoOpe
     | ConstN String
+    | UrlChanged Url.Url
+    | LinkClicked Browser.UrlRequest
 
 
 
@@ -136,8 +180,14 @@ update msg model =
             case result of
                 Ok t ->
                     let
+                        xsStr =
+                            t.xs |> L.map fromFloat |> join ", "
+
+                        ysStr =
+                            t.ys |> L.map fromFloat |> join ", "
+
                         updatedModel =
-                            { model | dataXY = Success t, dataXYId = t.dataXYId }
+                            { model | dataXY = Success t, dataXYId = t.dataXYId, xsInputStr = xsStr, ysInputStr = ysStr }
 
                         ( gotModel, gotCmd ) =
                             update GetConst updatedModel
@@ -160,6 +210,16 @@ update msg model =
                     decodeNs ysInputStr
             in
             ( { model | ys = decoded, ysInputStr = ysInputStr, ysErrStr = err }, Cmd.none )
+
+        GetDataXY ->
+            let
+                { endpoint, dataXYId } =
+                    model
+
+                cmd =
+                    Http.get { url = dataXYAPI endpoint dataXYId, expect = Http.expectJson GotDataXY dataXYDecoder }
+            in
+            ( model, cmd )
 
         PostDataXY ->
             let
@@ -241,6 +301,29 @@ update msg model =
             in
             ( { model | constN = n }, Cmd.none )
 
+        UrlChanged url ->
+            let
+                r =
+                    toRoute url
+
+                ( updated, cmd ) =
+                    case r of
+                        Xys i ->
+                            update GetDataXY { model | url = url, dataXYId = i }
+
+                        _ ->
+                            ( { model | url = url, dataXYId = 0 }, Cmd.none )
+            in
+            ( updated, cmd )
+
+        LinkClicked urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.key (Url.toString url) )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
         NoOpe ->
             ( model, Cmd.none )
 
@@ -292,7 +375,7 @@ stopBoth orig =
 -- view
 
 
-view : Model -> Document Msg
+view : Model -> Browser.Document Msg
 view model =
     let
         { xs, ys, xsInputStr, ysInputStr, xsErrStr, ysErrStr, dataXY, dataXYId, consts, endpoint, constN } =
@@ -342,7 +425,7 @@ view model =
                     else
                         div [] []
     in
-    { title = "title1"
+    { title = "peakseek|Polynomial Regression"
     , body =
         [ div [ class "section" ]
             [ div [ class "container" ]
@@ -633,8 +716,10 @@ bulma b =
 
 
 main =
-    Browser.document
+    Browser.application
         { init = init
+        , onUrlChange = UrlChanged
+        , onUrlRequest = LinkClicked
         , subscriptions = \_ -> Sub.none
         , update = update
         , view = view
