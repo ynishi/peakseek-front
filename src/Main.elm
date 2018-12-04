@@ -425,7 +425,7 @@ view model =
                     else
                         div [] []
     in
-    { title = "title1"
+    { title = "peakseek|Polynomial Regression"
     , body =
         [ div [ class "section" ]
             [ div [ class "container" ]
